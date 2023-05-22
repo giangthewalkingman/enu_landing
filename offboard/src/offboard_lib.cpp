@@ -9,17 +9,6 @@ OffboardControl::OffboardControl(const ros::NodeHandle &nh, const ros::NodeHandl
     state_sub_ = nh_.subscribe("/mavros/state", 10, &OffboardControl::stateCallback, this);
     odom_sub_ = nh_.subscribe("/mavros/local_position/odom", 10, &OffboardControl::odomCallback, this);
     gps_position_sub_ = nh_.subscribe("/mavros/global_position/global", 10, &OffboardControl::gpsPositionCallback, this);
-    // opt_point_sub_ = nh_.subscribe("optimization_point", 10, &OffboardControl::optPointCallback, this);
-    // point_target_sub_ = nh_.subscribe("point_target",10, &OffboardControl::targetPointCallback, this);
-    // check_last_opt_sub_ = nh_.subscribe("check_last_opt_point",10, &OffboardControl::checkLastOptPointCallback, this);
-
-    // //DuyNguyen
-    // marker_p_sub_ = nh_.subscribe("/target_pos",10, &OffboardControl::markerCallback, this);
-    // check_move_sub_ = nh_.subscribe("/move_position",10, &OffboardControl::checkMoveCallback, this);
-    // ids_detection_sub_ = nh_.subscribe("/ids_detection",10, &OffboardControl::checkIdsDetectionCallback, this);
-    // local_p_sub_ = nh_.subscribe("/mavros/local_position/pose",10, &OffboardControl::poseCallback, this);
-
-
     setpoint_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("mavros/setpoint_position/local", 10);
     odom_error_pub_ = nh_.advertise<nav_msgs::Odometry>("odom_error", 1, true);
     arming_client_ = nh_.serviceClient<mavros_msgs::CommandBool>("/mavros/cmd/arming");
@@ -33,12 +22,6 @@ OffboardControl::OffboardControl(const ros::NodeHandle &nh, const ros::NodeHandl
     nh_private_.getParam("/offboard_node/target_x_pos", x_target_);
     nh_private_.getParam("/offboard_node/target_y_pos", y_target_);
     nh_private_.getParam("/offboard_node/target_z_pos", z_target_);
-    //nh_private_.getParam("/offboard_node/target_yaw", yaw_target_);
-    // nh_private_.getParam("/offboard_node/number_of_goal", num_of_gps_goal_);
-    // nh_private_.getParam("/offboard_node/goal_error", goal_error_);
-    // nh_private_.getParam("/offboard_node/latitude", lat_goal_);
-    // nh_private_.getParam("/offboard_node/longitude", lon_goal_);
-    // nh_private_.getParam("/offboard_node/altitude", alt_goal_);
     nh_private_.getParam("/offboard_node/z_takeoff", z_takeoff_);
     nh_private_.getParam("/offboard_node/z_delivery", z_delivery_);
     nh_private_.getParam("/offboard_node/land_error", land_error_);
@@ -211,37 +194,6 @@ void OffboardControl::gpsPositionCallback(const sensor_msgs::NavSatFix::ConstPtr
     current_gps_position_ = *msg;
     gps_received_ = true;
 }
-
-// void OffboardControl::optPointCallback(const geometry_msgs::Point::ConstPtr &msg) {
-//     opt_point_ = *msg;
-//     //optimization_point_.push_back(*msg);
-//     opt_point_received_ = true;
-// }
-
-// void OffboardControl::targetPointCallback(const std_msgs::Float32MultiArray::ConstPtr &msg) {
-//     target_array_ = *msg;
-// }
-
-// void OffboardControl::checkLastOptPointCallback(const std_msgs::Bool::ConstPtr &msg) {
-//     check_last_opt_point_.data = false;
-//     check_last_opt_point_ = *msg;
-// }
-
-// void OffboardControl::markerCallback(const geometry_msgs::PoseStamped::ConstPtr &msg) {
-//     marker_position_ = *msg;
-// }
-
-// void OffboardControl::checkMoveCallback(const std_msgs::Bool msg) {
-//     check_mov_ = msg.data;
-// }
-
-// void OffboardControl::checkIdsDetectionCallback(const std_msgs::Bool msg) {
-//     check_ids_ = msg.data;
-// }
-
-// void OffboardControl::poseCallback(const geometry_msgs::PoseStamped::ConstPtr & msg) {
-//     current_position_ = *msg;
-// }
 
 /* manage input: select mode, setpoint type, ... */
 void OffboardControl::inputSetpoint() {
@@ -544,15 +496,6 @@ double OffboardControl::calculateYawOffset(geometry_msgs::PoseStamped current, g
     else {
         return alpha;
     }
-    // std::cout << "\n[Debug] delta yaw " << alpha << "\n";
-    //std::cout << "\n[Debug] delta yaw " << degreeOf(alpha) << "\n";
-    // if(alpha>PI)
-    // {
-    //     return (alpha-2*PI);
-    // }
-    // else {
-    //     return alpha;
-    // }
 }
 
 
@@ -697,28 +640,6 @@ void OffboardControl::returnHome(geometry_msgs::PoseStamped home_pose) {
     }
 }
 
-// //DuyNguyen
-// void OffboardControl::returnHomeYaw(geometry_msgs::PoseStamped home_pose) {
-//     ros::Rate rate(10.0);
-//     bool home_reached = false;
-//     while (ros::ok() && !home_reached) {
-//         components_vel_ = velComponentsCalc(vel_desired_, targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z), home_pose);
-
-//         target_enu_pose_ = targetTransfer(current_odom_.pose.pose.position.x + components_vel_.x, current_odom_.pose.pose.position.y + components_vel_.y, current_odom_.pose.pose.position.z + components_vel_.z, home_pose.pose.orientation);
-//         target_enu_pose_.header.stamp = ros::Time::now();
-//         setpoint_pose_pub_.publish(target_enu_pose_);
-
-//         home_reached = checkPositionError(target_error_, home_pose);
-//         if (home_reached) {
-//             hovering(home_pose, hover_time_);
-//         }
-//         else {
-//             ros::spinOnce();
-//             rate.sleep();
-//         }
-//     }
-// }
-
 /* perform delivery task
    input: current setpoint in trajectory and time to unpack */
 void OffboardControl::delivery(geometry_msgs::PoseStamped setpoint, double unpack_time) {
@@ -818,8 +739,6 @@ geometry_msgs::Point OffboardControl::ECEFToENU(geometry_msgs::Point ecef, senso
     return enu;
 }
 
-/* check offset between current position from odometry and setpoint position to decide when drone reached setpoint
-   input: error in meter to check and target pose. This function check between current pose from odometry and target pose */
 bool OffboardControl::checkPositionError(double error, geometry_msgs::PoseStamped target) {
     Eigen::Vector3d geo_error;
     geo_error << target.pose.position.x - current_odom_.pose.pose.position.x, target.pose.position.y - current_odom_.pose.pose.position.y, target.pose.position.z - current_odom_.pose.pose.position.z;
